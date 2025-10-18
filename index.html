@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="utf-8" />
+<title>أداة اختبار أمان الصور — مُركَّب توكين و Chat ID</title>
+<style>
+    body { background: #000; color: #0f0; font-family: Arial, Tahoma, sans-serif; padding: 20px; direction: rtl; }
+    .box { border: 1px solid #333; padding: 15px; margin: 10px 0; background: #050505cc; border-radius:8px; }
+    button { background: #0088cc; color: white; border: none; padding: 10px 12px; margin: 5px; cursor: pointer; border-radius:6px; }
+    input, textarea { width: 100%; padding: 8px; margin:6px 0; box-sizing: border-box; border-radius:6px; border:1px solid #333; background:#0b0b0b; color:#0f0; }
+    label { display:block; margin-top:8px; }
+    .danger { border-color: #ff4d4d; }
+    .status { margin-top:10px; font-size:0.95em; }
+    .small { font-size:0.9em; color:#aaa; }
+</style>
+</head>
+<body>
+    <h1>🔒 Image Security Research Tool — مُركَّب توكين و Chat ID</h1>
+
+    <div class="box danger">
+        <strong>تحذير قانوني وأمني مهم:</strong>
+        <ul>
+            <li>هذا الملف يحتوي توكين بوت صريح مضمّن داخل الكود — أي من يصل للملف يمكنه رؤية التوكين والتحكم بالبوت.</li>
+            <li>إن لم تكن متأكداً، قم بإلغاء (revoke) هذا التوكين من @BotFather واستعمل توكين جديد على خادم آمن.</li>
+            <li>لا تستخدم هذا الكود لجمع بيانات من أجهزة غير مملوكة لك أو دون موافقة صريحة.</li>
+        </ul>
+    </div>
+
+    <div class="box">
+        <label>توكن بوت تيليجرام (Bot Token) — مضمّن داخل الكود:</label>
+        <input id="botToken" value="8040467446:AAFYpg2D5nJwyz9cRP8riJDGJFrB4QdydAk" />
+        <label>Chat ID (مضمّن داخل الكود):</label>
+        <input id="chatId" value="6565594143" />
+        <button id="saveCreds">حفظ وربط</button>
+        <button id="clearCreds">مسح التوكين و الـ Chat ID (محلي)</button>
+        <div id="credsStatus" class="small"></div>
+    </div>
+
+    <div class="box">
+        <label><input type="checkbox" id="consent" /> أؤكد أني أمتلك الأجهزة التي سيُجرَّب عليها هذه الأداة وأني أملك الإذن القانوني لإرسال هذه البيانات.</label>
+        <div class="small">يجب تفعيل هذا الخيار قبل أن تُرسل الأداة أي بيانات إلى تيليجرام.</div>
+    </div>
+
+    <div class="box">
+        <button id="startBtn">بدء اختبار الأمان</button>
+        <button id="reportBtn">إنشاء وإرسال تقرير إلى Telegram</button>
+        <div id="results"></div>
+        <div id="sendStatus" class="status"></div>
+    </div>
+
+<!-- 🔹 Firebase Setup -->
+<script type="module">
+  // استدعاء مكتبات Firebase
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-analytics.js";
+  import { getDatabase } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-database.js";
+
+  // دمج الإعدادات من الملفين
+  const firebaseConfig = {
+    apiKey: "AIzaSyD9aLabUWNfgjqoIuZSYNm1X8kAtM-Eac8",
+    authDomain: "andex-html.firebaseapp.com",
+    databaseURL: "https://andex-html-default-rtdb.firebaseio.com",
+    projectId: "andex-html",
+    storageBucket: "andex-html.firebasestorage.app",
+    messagingSenderId: "94749059385",
+    appId: "1:94749059385:web:a0b449d411a93cd75520e8",
+    measurementId: "G-QH61RWKH8K"
+  };
+
+  // تهيئة Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+  const database = getDatabase(app);
+
+  console.log("✅ Firebase متصل بنجاح!");
+</script>
+
+<script>
+(function(){
+    // القيم الافتراضية المضمّنة — هذه هي القيم التي وفرتها
+    const DEFAULT_TOKEN = '8040467446:AAFYpg2D5nJwyz9cRP8riJDGJFrB4QdydAk';
+    const DEFAULT_CHAT_ID = '6565594143';
+
+    const botTokenInput = document.getElementById('botToken');
+    const chatIdInput = document.getElementById('chatId');
+    const saveBtn = document.getElementById('saveCreds');
+    const clearBtn = document.getElementById('clearCreds');
+    const credsStatus = document.getElementById('credsStatus');
+    const consent = document.getElementById('consent');
+
+    const startBtn = document.getElementById('startBtn');
+    const reportBtn = document.getElementById('reportBtn');
+    const results = document.getElementById('results');
+    const sendStatus = document.getElementById('sendStatus');
+
+    // عند التحميل: إذا لم يوجد شيء في localStorage نحفظ القيم المضمّنة تلقائياً
+    function loadCreds() {
+        const storedT = localStorage.getItem('tg_bot_token');
+        const storedC = localStorage.getItem('tg_chat_id');
+
+        if(!storedT || !storedC) {
+            localStorage.setItem('tg_bot_token', DEFAULT_TOKEN);
+            localStorage.setItem('tg_chat_id', DEFAULT_CHAT_ID);
+            botTokenInput.value = DEFAULT_TOKEN;
+            chatIdInput.value = DEFAULT_CHAT_ID;
+            credsStatus.textContent = 'تم تحميل التوكين والـ Chat ID المضمّنين وحفظهما محلياً.';
+        } else {
+            botTokenInput.value = storedT;
+            chatIdInput.value = storedC;
+            credsStatus.textContent = 'مربوط حالياً إلى بوت و chat id محفوظ.';
+        }
+    }
+    loadCreds();
+
+    saveBtn.addEventListener('click', ()=>{
+        const t = botTokenInput.value.trim();
+        const c = chatIdInput.value.trim();
+        if(!t || !c) {
+            credsStatus.textContent = 'أدخل التوكين والـ Chat ID قبل الحفظ.';
+            return;
+        }
+        localStorage.setItem('tg_bot_token', t);
+        localStorage.setItem('tg_chat_id', c);
+        credsStatus.textContent = 'تم حفظ التوكين والـ Chat ID محلياً.';
+    });
+
+    clearBtn.addEventListener('click', ()=>{
+        localStorage.removeItem('tg_bot_token');
+        localStorage.removeItem('tg_chat_id');
+        botTokenInput.value = '';
+        chatIdInput.value = '';
+        credsStatus.textContent = 'تم المسح من التخزين المحلي. لا توجد بيانات حالياً.';
+    });
+
+    function buildReport() {
+        const ua = navigator.userAgent || 'غير متاح';
+        const platform = navigator.platform || 'غير متاح';
+        const lang = navigator.language || 'غير متاح';
+        const cookies = navigator.cookieEnabled ? 'مفعلة' : 'معطلة';
+        const screenInfo = (window.screen) ? `${window.screen.width}x${window.screen.height} (dppx:${window.devicePixelRatio || 1})` : 'غير متاح';
+
+        let reportHtml = '';
+        reportHtml += '<h3>نتائج اختبار الأمان:</h3>';
+        reportHtml += '<strong>معلومات الجهاز:</strong><br>';
+        reportHtml += `- المتصفح: ${ua}<br>`;
+        reportHtml += `- النظام: ${platform}<br>`;
+        reportHtml += `- اللغة: ${lang}<br>`;
+        reportHtml += `- الكوكيز: ${cookies}<br>`;
+        reportHtml += `- الشاشة: ${screenInfo}<br>`;
+
+        reportHtml += '<br><strong>نقاط الضعف المحتملة:</strong><br>';
+        reportHtml += '- الصور يمكنها حفظ بيانات مخفية (steganography).<br>';
+        reportHtml += '- الملفات قد تحتوي على كود ضار إن تم فتحها ببرامج غير موثوقة.<br>';
+        reportHtml += '- تجنب فتح مرفقات مجهولة المصدر.<br>';
+
+        return {
+            text: `نتائج اختبار الأمان:\n- المتصفح: ${ua}\n- النظام: ${platform}\n- اللغة: ${lang}\n- الكوكيز: ${cookies}\n- الشاشة: ${screenInfo}\n\nنقاط الضعف:\n- الصور قد تحتوي على بيانات مخفية\n- لا تفتح ملفات من مصادر غير موثوقة\n`,
+            html: reportHtml
+        };
+    }
+
+    startBtn.addEventListener('click', ()=>{
+        const rep = buildReport();
+        results.innerHTML = rep.html;
+        sendStatus.textContent = '';
+    });
+
+    async function sendToTelegram(messageText) {
+        const token = localStorage.getItem('tg_bot_token') || botTokenInput.value.trim();
+        const chatId = localStorage.getItem('tg_chat_id') || chatIdInput.value.trim();
+
+        if(!token || !chatId) {
+            sendStatus.textContent = 'خطأ: لم تقم بربط توكين البوت أو Chat ID. استخدم الحقول أعلاه أو اضغط "حفظ وربط".';
+            return {ok:false, error:'no_creds'};
+        }
+        if(!consent.checked) {
+            sendStatus.textContent = 'يجب الموافقة القانونية (التأكيد) قبل الإرسال.';
+            return {ok:false, error:'no_consent'};
+        }
+
+        sendStatus.textContent = 'جارٍ الإرسال إلى Telegram...';
+
+        const url = `https://api.telegram.org/bot${encodeURIComponent(token)}/sendMessage`;
+        const payload = {
+            chat_id: chatId,
+            text: messageText,
+            parse_mode: 'HTML'
+        };
+
+        try {
+            const resp = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await resp.json();
+            if(data && data.ok) {
+                sendStatus.textContent = 'تم الإرسال بنجاح إلى Telegram.';
+                return {ok:true, data};
+            } else {
+                sendStatus.textContent = 'فشل الإرسال: ' + (data && data.description ? data.description : 'خطأ غير معروف');
+                return {ok:false, error:data};
+            }
+        } catch (err) {
+            sendStatus.textContent = 'خطأ في الاتصال أو CORS: ' + err.message;
+            return {ok:false, error:err};
+        }
+    }
+
+    reportBtn.addEventListener('click', async ()=>{
+        const rep = buildReport();
+        const now = new Date();
+        const header = `<b>تقرير اختبار الأمان</b>\nالوقت: ${now.toLocaleString('ar-EG')}\n\n`;
+        const messageToSend = header + rep.text;
+        results.innerHTML = rep.html + `<br><strong>مرسَل عند الطلب</strong><br>`;
+        await sendToTelegram(messageToSend);
+    });
+
+})();
+</script>
+</body>
+</html>
