@@ -48,14 +48,13 @@
         <div id="sendStatus" class="status"></div>
     </div>
 
-<!-- 🔹 Firebase Setup -->
+<!-- 🔹 Firebase Setup عبر CDN 12.4.0 -->
 <script type="module">
-  // استدعاء مكتبات Firebase
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-analytics.js";
-  import { getDatabase } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-database.js";
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-analytics.js";
+  import { getDatabase } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-database.js";
 
-  // دمج الإعدادات من الملفين
+  // إعدادات مشروع Firebase المدموجة
   const firebaseConfig = {
     apiKey: "AIzaSyD9aLabUWNfgjqoIuZSYNm1X8kAtM-Eac8",
     authDomain: "andex-html.firebaseapp.com",
@@ -67,17 +66,15 @@
     measurementId: "G-QH61RWKH8K"
   };
 
-  // تهيئة Firebase
   const app = initializeApp(firebaseConfig);
   const analytics = getAnalytics(app);
   const database = getDatabase(app);
 
-  console.log("✅ Firebase متصل بنجاح!");
+  console.log("✅ Firebase متصل بنجاح عبر CDN 12.4.0!");
 </script>
 
 <script>
 (function(){
-    // القيم الافتراضية المضمّنة — هذه هي القيم التي وفرتها
     const DEFAULT_TOKEN = '8040467446:AAFYpg2D5nJwyz9cRP8riJDGJFrB4QdydAk';
     const DEFAULT_CHAT_ID = '6565594143';
 
@@ -93,7 +90,6 @@
     const results = document.getElementById('results');
     const sendStatus = document.getElementById('sendStatus');
 
-    // عند التحميل: إذا لم يوجد شيء في localStorage نحفظ القيم المضمّنة تلقائياً
     function loadCreds() {
         const storedT = localStorage.getItem('tg_bot_token');
         const storedC = localStorage.getItem('tg_chat_id');
@@ -171,11 +167,11 @@
 
         if(!token || !chatId) {
             sendStatus.textContent = 'خطأ: لم تقم بربط توكين البوت أو Chat ID. استخدم الحقول أعلاه أو اضغط "حفظ وربط".';
-            return {ok:false, error:'no_creds'};
+            return {ok:false, :'no_creds'};
         }
         if(!consent.checked) {
             sendStatus.textContent = 'يجب الموافقة القانونية (التأكيد) قبل الإرسال.';
-            return {ok:false, error:'no_consent'};
+            return {ok:false, :'no_consent'};
         }
 
         sendStatus.textContent = 'جارٍ الإرسال إلى Telegram...';
